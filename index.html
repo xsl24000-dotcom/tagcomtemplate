@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>AI Prompt Pro - 动态词库版</title>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --success: #10b981;
+            --danger: #ef4444;
+            --tag-bg: #f0f3ff;
+            --tag-text: #312e81;
+            --master-bg: #eef6ff; 
+            --master-text: #334155;
+            --master-border: #bae6fd;
+            --tag-font-size: 18px; 
+        }
+        
+        body { 
+            font-family: 'PingFang SC', system-ui, sans-serif; 
+            background: #f0f4f8; padding: 20px; display: flex; 
+            flex-direction: column; align-items: center; color: #333;
+            user-select: none; -webkit-user-select: none;
+        }
+
+        input, textarea { user-select: text !important; -webkit-user-select: text !important; }
+        .container { width: 100%; max-width: 1000px; }
+
+        .master-output { 
+            background: var(--master-bg); color: var(--master-text); 
+            padding: 25px; border-radius: 24px; margin-bottom: 30px; 
+            box-shadow: 0 10px 25px rgba(186, 230, 253, 0.4); border: 2px solid var(--master-border);
+        }
+        .master-output h3 { margin-top: 0; color: #0284c7; font-size: 14px; font-weight: 800; letter-spacing: 1.5px; }
+        #totalResult { 
+            background: rgba(255, 255, 255, 0.6); padding: 18px; border-radius: 12px; 
+            font-family: 'Cascadia Code', monospace; font-size: 16px; line-height: 1.6;
+            min-height: 60px; white-space: pre-wrap; word-break: break-all; margin-bottom: 15px; color: #075985;
+        }
+
+        .controls-row { 
+            position: sticky; top: 10px; z-index: 1000; 
+            display: flex; gap: 15px; align-items: center; margin-bottom: 25px; 
+        }
+        
+        .search-container { flex: 1; position: relative; }
+        #tagInput { 
+            width: 100%; padding: 18px 25px; border: none; border-radius: 20px; font-size: 18px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); outline: none; border: 1px solid #fff;
+        }
+
+        .size-slider-box { 
+            background: white; padding: 10px 20px; border-radius: 20px; 
+            display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            white-space: nowrap; font-weight: bold; color: var(--primary);
+        }
+        input[type=range] { cursor: pointer; accent-color: var(--primary); }
+
+        .panel { 
+            background: #fff; border: 3px solid transparent; border-radius: 20px; 
+            padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+        }
+        .panel-handle { cursor: move; color: #cbd5e1; margin-right: 12px; font-size: 24px; }
+        .panel.active { border-color: var(--primary); background: #fdfdff; }
+        .panel.selected { border-color: var(--secondary); background: #fffafc; }
+        
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .panel-title { font-weight: bold; border: none; font-size: 1.2em; width: 60%; background: transparent; padding: 5px; color: #1e293b; }
+
+        .tag-container { 
+            display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px; 
+            min-height: 90px; padding: 15px; background: #f8fafc; border-radius: 15px; border: 2px dashed #e2e8f0;
+        }
+        
+        .tag-chip { 
+            background: var(--tag-bg); color: var(--tag-text); 
+            padding: 0.5em 1em; border-radius: 0.8em; 
+            display: flex; align-items: center; gap: 0.6em; 
+            font-size: var(--tag-font-size); 
+            font-weight: 500; cursor: grab; transition: transform 0.2s; 
+            border: 1px solid rgba(99, 102, 241, 0.1);
+        }
+        .tag-chip:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99, 102, 241, 0.2); }
+        
+        .icon-btn { cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .fav-btn { color: #f59e0b; }
+        .remove-btn { color: #f87171; font-weight: bold; }
+
+        .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-add { background: var(--primary); color: white; width: 100%; margin-bottom: 40px; }
+        .btn-copy-master { background: var(--success); color: white; width: 100%; }
+        .btn-clear { background: #f1f5f9; color: #64748b; font-size: 12px; }
+
+        .suggestions { 
+            position: absolute; width: 100%; background: white; border-radius: 15px; 
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: none; max-height: 350px; overflow-y: auto; margin-top: 10px; 
+        }
+        .suggestion-item { padding: 12px 25px; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; }
+        .suggestion-item:hover { background: #f8faff; }
+
+        .sortable-ghost { opacity: 0.2; }
+        .panel-ghost { opacity: 0.4; border: 2px dashed var(--primary); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="master-output">
+        <h3>✨ 总结果实时预览</h3>
+        <div id="totalResult">等待输入标签...</div>
+        <button class="btn btn-copy-master" onclick="copyMasterResult()">复制完整 Prompt</button>
+    </div>
+
+    <div class="controls-row">
+        <div class="search-container">
+            <input type="text" id="tagInput" placeholder="🔍 输入首字母自动加载词库 (如 'a', 'b')...">
+            <div id="suggestions" class="suggestions"></div>
+        </div>
+        
+        <div class="size-slider-box">
+            <span>字号:</span>
+            <input type="range" id="sizeSlider" min="12" max="32" value="18">
+            <span id="sizeVal">18px</span>
+        </div>
+    </div>
+
+    <div id="outputRows">
+        <div class="panel active" onclick="setActiveRow(this)">
+            <div class="panel-header">
+                <div><span class="panel-handle">⠿</span><input class="panel-title" value="角色主体"></div>
+                <button class="btn btn-clear" onclick="this.closest('.panel').remove(); updateMasterOutput();">删除</button>
+            </div>
+            <div class="tag-container"></div>
+        </div>
+    </div>
+
+    <button class="btn btn-add" onclick="addNewRow()">+ 建立新输出栏</button>
+
+    <div class="favorite-section" style="width:100%">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+            <h2 style="margin:0; font-size: 1.5em; color: #64748b;">⭐ 我的收藏库</h2>
+            <button class="btn" style="background:var(--secondary); color:white; font-size:12px;" onclick="addFavCategory()">+ 新分类</button>
+        </div>
+        <div id="favCategories">
+            <div class="panel selected" onclick="setSelectedFav(this)">
+                <div class="panel-header">
+                    <div><span class="panel-handle">⠿</span><input class="panel-title" value="默认收藏分类"></div>
+                </div>
+                <div class="tag-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// --- 基础状态 ---
+let activeRow = document.querySelector('#outputRows .panel');
+let selectedFav = document.querySelector('#favCategories .panel');
+let currentCache = []; // 当前字母的文件缓存
+let currentLetter = ''; // 当前加载的字母
+
+// --- 字号控制 ---
+const sizeSlider = document.getElementById('sizeSlider');
+const sizeValText = document.getElementById('sizeVal');
+sizeSlider.addEventListener('input', (e) => {
+    const val = e.target.value;
+    document.documentElement.style.setProperty('--tag-font-size', val + 'px');
+    sizeValText.innerText = val + 'px';
+});
+
+// --- 核心搜索与词库读取逻辑 ---
+const tagInput = document.getElementById('tagInput');
+const suggestionsBox = document.getElementById('suggestions');
+
+tagInput.addEventListener('input', async (e) => {
+    const val = e.target.value.toLowerCase().trim();
+    if (val.length < 1) {
+        suggestionsBox.style.display = 'none';
+        return;
+    }
+
+    // 确定首字母对应的文件名
+    const firstChar = val[0];
+    let letter = /^[a-z]/.test(firstChar) ? firstChar : 
+                 (/^[0-9]/.test(firstChar) ? 'num' : 'other');
+
+    // 动态加载 JSON 文件 (基于 tags_data 文件夹)
+    if (currentLetter !== letter) {
+        try {
+            // 注意：这里路径要匹配你 split_csv.py 生成的文件夹
+            const response = await fetch(`tags_data/${letter}.json`);
+            if (!response.ok) throw new Error('文件未找到');
+            currentCache = await response.json();
+            currentLetter = letter;
+        } catch (err) {
+            console.error("词库加载失败，请确保 tags_data 文件夹与 HTML 在同一目录:", err);
+            return;
+        }
+    }
+
+    // 在当前缓存中模糊匹配
+    const matches = currentCache
+        .filter(i => i.tag.includes(val) || i.aliases.includes(val))
+        .slice(0, 15); // 展示前15个结果
+
+    if (matches.length > 0) {
+        suggestionsBox.innerHTML = matches.map(m => `
+            <div class="suggestion-item" onclick="addTagToActive('${m.tag}')">
+                <span><strong>${m.tag}</strong> <small style="color:#94a3b8; margin-left:10px;">${m.aliases.split(',')[0]}</small></span>
+                <span style="color:#94a3b8;">${(m.count/1000).toFixed(1)}k</span>
+            </div>
+        `).join('');
+        suggestionsBox.style.display = 'block';
+    } else {
+        suggestionsBox.style.display = 'none';
+    }
+});
+
+// --- 界面交互逻辑 ---
+function setActiveRow(el) {
+    document.querySelectorAll('#outputRows .panel').forEach(r => r.classList.remove('active'));
+    el.classList.add('active'); activeRow = el;
+}
+
+function setSelectedFav(el) {
+    document.querySelectorAll('#favCategories .panel').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected'); selectedFav = el;
+}
+
+function updateMasterOutput() {
+    const rows = document.querySelectorAll('#outputRows .panel');
+    let finalString = "";
+    rows.forEach(row => {
+        const tags = Array.from(row.querySelectorAll('.tag-text')).map(t => t.innerText.trim());
+        if (tags.length > 0) finalString += tags.join(', ') + ",\n";
+    });
+    document.getElementById('totalResult').innerText = finalString.trim() || "等待输入标签...";
+}
+
+function addTagToActive(tagName) {
+    if (!activeRow) return;
+    createTagChip(tagName, activeRow.querySelector('.tag-container'));
+    tagInput.value = ''; suggestionsBox.style.display = 'none';
+    updateMasterOutput();
+}
+
+function createTagChip(name, container) {
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `
+        <div class="icon-btn fav-btn" onclick="event.stopPropagation(); addToSelectedFav('${name}')">★</div>
+        <span class="tag-text">${name}</span>
+        <div class="icon-btn remove-btn" onclick="event.stopPropagation(); this.parentElement.remove(); updateMasterOutput();">×</div>
+    `;
+    chip.onclick = () => { if (chip.closest('#favCategories')) addTagToActive(name); };
+    container.appendChild(chip);
+}
+
+// --- 拖拽与增删逻辑 ---
+function initPanelSortable(id) {
+    new Sortable(document.getElementById(id), { handle: '.panel-handle', animation: 250, ghostClass: 'panel-ghost', onEnd: updateMasterOutput });
+}
+function initTagSortable(el) {
+    new Sortable(el, { group: 'tags', animation: 150, ghostClass: 'sortable-ghost', onEnd: updateMasterOutput });
+}
+
+initPanelSortable('outputRows');
+initPanelSortable('favCategories');
+document.querySelectorAll('.tag-container').forEach(initTagSortable);
+
+function addNewRow() {
+    const div = document.createElement('div');
+    div.className = 'panel';
+    div.onclick = function() { setActiveRow(this); };
+    div.innerHTML = `
+        <div class="panel-header">
+            <div><span class="panel-handle">⠿</span><input class="panel-title" value="新输出栏"></div>
+            <button class="btn btn-clear" onclick="this.closest('.panel').remove(); updateMasterOutput();">删除</button>
+        </div>
+        <div class="tag-container"></div>
+    `;
+    document.getElementById('outputRows').appendChild(div);
+    initTagSortable(div.querySelector('.tag-container'));
+    setActiveRow(div); updateMasterOutput();
+}
+
+function addToSelectedFav(name) {
+    if (selectedFav) {
+        // 防止重复收藏
+        const existing = Array.from(selectedFav.querySelectorAll('.tag-text')).map(t => t.innerText);
+        if(!existing.includes(name)) createTagChip(name, selectedFav.querySelector('.tag-container'));
+    }
+}
+
+function addFavCategory() {
+    const div = document.createElement('div');
+    div.className = 'panel';
+    div.onclick = function() { setSelectedFav(this); };
+    div.innerHTML = `
+        <div class="panel-header">
+            <div><span class="panel-handle">⠿</span><input class="panel-title" value="新收藏库"></div>
+            <button class="btn btn-clear" onclick="this.parentElement.parentElement.remove()">删除</button>
+        </div>
+        <div class="tag-container"></div>
+    `;
+    document.getElementById('favCategories').appendChild(div);
+    initTagSortable(div.querySelector('.tag-container'));
+    setSelectedFav(div);
+}
+
+function copyMasterResult() {
+    const text = document.getElementById('totalResult').innerText;
+    if (text === "等待输入标签...") return;
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = document.querySelector('.btn-copy-master');
+        btn.innerText = "✨ 复制成功！";
+        setTimeout(() => btn.innerText = "复制完整 Prompt", 1500);
+    });
+}
+
+// 隐藏建议框点击
+document.addEventListener('click', (e) => { if(!tagInput.contains(e.target)) suggestionsBox.style.display = 'none'; });
+
+// 回车直接添加
+tagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && tagInput.value.trim() !== '') {
+        addTagToActive(tagInput.value.trim());
+    }
+});
+</script>
+</body>
+</html>
