@@ -30,7 +30,6 @@
         input, textarea { user-select: text !important; -webkit-user-select: text !important; font-size: 16px !important; }
         .container { width: 100%; max-width: 1000px; box-sizing: border-box; }
 
-        /* 顶部预览区 - 保留高级感 */
         .master-output { 
             background: var(--master-bg); color: var(--master-text); 
             padding: 25px; border-radius: 24px; margin-bottom: 30px; 
@@ -44,7 +43,6 @@
             color: #075985; border: 1px solid #bae6fd; resize: vertical; margin-bottom: 15px; outline: none;
         }
 
-        /* 控件区 */
         .controls-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; width: 100%; }
         .search-row { position: relative; width: 100%; }
         #tagInput { 
@@ -53,7 +51,6 @@
         }
         #tagInput:focus { box-shadow: 0 10px 40px rgba(99, 102, 241, 0.15); }
 
-        /* 设置行 - 保持精致的同时适配手机 */
         .settings-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; }
         .size-slider-box { 
             background: white; padding: 8px 18px; border-radius: 15px; 
@@ -66,7 +63,6 @@
             color: var(--primary); font-weight: bold; outline: none; text-align: center;
         }
 
-        /* 面板设计 */
         .panel { 
             background: #fff; border: 3px solid transparent; border-radius: 20px; 
             padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
@@ -85,48 +81,64 @@
             min-height: 80px; padding: 15px; background: #f8fafc; border-radius: 15px; border: 2px dashed #e2e8f0;
         }
         
-        /* 标签设计 */
+        /* --- 标签及按钮优化区 --- */
         .tag-chip { 
             background: var(--tag-bg); color: var(--tag-text); 
-            padding: 0.5em 0.9em; border-radius: 1em; 
-            display: flex; align-items: center; gap: 0.7em; 
+            padding: 0 4px 0 12px; /* 左边距大一点，右边按钮自带边距 */
+            border-radius: 2em; 
+            display: flex; align-items: center; 
             font-size: var(--tag-font-size); 
             font-weight: 600; cursor: grab; transition: 0.2s; 
             border: 1px solid rgba(99, 102, 241, 0.1);
             box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+            min-height: 2.2em; /* 确保高度足够容纳大图标 */
         }
         .tag-chip:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99, 102, 241, 0.2); }
-        .tag-chip:active { cursor: grabbing; }
         
-        .icon-btn { cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.7; }
-        .icon-btn:hover { opacity: 1; transform: scale(1.2); }
-        .fav-btn { color: #f59e0b; }
-        .remove-btn { color: #f87171; font-weight: bold; }
+        .tag-text {
+            padding: 8px 4px;
+            pointer-events: none; /* 防止点击文字干扰拖拽 */
+        }
 
-        /* 按钮设计 */
+        .icon-btn { 
+            cursor: pointer; 
+            transition: 0.2s; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            opacity: 0.8; 
+            width: 36px;  /* 固定宽度确保点击区域 */
+            height: 36px; /* 固定高度确保点击区域 */
+            border-radius: 50%;
+            font-size: 1.1em;
+        }
+        
+        .fav-btn { color: #f59e0b; margin-right: -4px; }
+        .fav-btn:hover { background: #fff7ed; opacity: 1; transform: scale(1.1); }
+        
+        .remove-btn { color: #f87171; font-weight: bold; margin-left: -4px; }
+        .remove-btn:hover { background: #fef2f2; opacity: 1; transform: scale(1.1); }
+        /* --- 优化结束 --- */
+
         .btn { padding: 12px 20px; border-radius: 14px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn:active { transform: scale(0.95); }
         .btn-add { background: var(--primary); color: white; width: 100%; margin-bottom: 40px; font-size: 16px; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2); }
         .btn-copy-master { background: var(--success); color: white; width: 100%; height: 52px; font-size: 16px; box-shadow: 0 8px 15px rgba(16, 185, 129, 0.2); }
         .btn-clear-row { background: #fee2e2; color: #ef4444; font-size: 12px; }
         .btn-del-row { background: #f1f5f9; color: #64748b; font-size: 12px; }
 
-        /* 联想框 */
         .suggestions { 
             position: absolute; width: 100%; background: white; border-radius: 20px; z-index: 1001;
             box-shadow: 0 15px 50px rgba(0,0,0,0.15); display: none; max-height: 380px; overflow-y: auto; margin-top: 10px; border: 1px solid #f0f0f0;
         }
         .suggestion-item { padding: 14px 25px; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #f8f8f8; transition: 0.2s; }
-        .suggestion-item:hover { background: #f5f7ff; padding-left: 30px; }
+        .suggestion-item:hover { background: #f59e0b1a; padding-left: 30px; }
 
-        /* 手机端无感适配 */
         @media (max-width: 600px) {
             body { padding: 10px; }
             .master-output { padding: 15px; border-radius: 20px; }
             .settings-row { justify-content: center; }
             .size-slider-box { flex: 1; min-width: 140px; }
             .panel-title { width: 70%; }
-            .key-hint { display: none; }
         }
     </style>
 </head>
@@ -141,7 +153,7 @@
 
     <div class="controls-container">
         <div class="search-row">
-            <input type="text" id="tagInput" placeholder="🔍 模糊搜索 (支持拼写错误)..." autocomplete="off">
+            <input type="text" id="tagInput" placeholder="🔍 搜索词库 或 直接粘贴/输入长条Tags..." autocomplete="off">
             <div id="suggestions" class="suggestions"></div>
         </div>
         
@@ -198,7 +210,6 @@
 </div>
 
 <script>
-// --- 核心逻辑 ---
 let activeRow = document.querySelector('#outputRows .panel');
 let selectedFav = document.querySelector('#favCategories .panel');
 let currentCache = [];
@@ -209,31 +220,21 @@ let searchThreshold = 0.4;
 
 const tagInput = document.getElementById('tagInput');
 const suggestionsBox = document.getElementById('suggestions');
-const thresholdSlider = document.getElementById('thresholdSlider');
-const thresholdInput = document.getElementById('thresholdInput');
 
-// 容错滑块同步
-function syncThreshold(val, source) {
-    searchThreshold = parseFloat(val);
-    if (source === 'slider') thresholdInput.value = val;
-    else thresholdSlider.value = val;
-    if (fuse) {
-        fuse.options.threshold = searchThreshold;
-        if (tagInput.value.trim()) performSearch(tagInput.value.trim());
+// 粘贴自动切割逻辑
+tagInput.addEventListener('paste', (e) => {
+    const pastedData = (e.clipboardData || window.clipboardData).getData('text');
+    if (pastedData.includes(',') || pastedData.includes('，')) {
+        e.preventDefault();
+        processBatchTags(pastedData);
     }
-}
-thresholdSlider.addEventListener('input', (e) => syncThreshold(e.target.value, 'slider'));
-thresholdInput.addEventListener('change', (e) => {
-    let val = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 1);
-    syncThreshold(val, 'input');
-});
-
-// 搜索功能
-tagInput.addEventListener('input', async (e) => {
-    performSearch(e.target.value.toLowerCase().trim());
 });
 
 async function performSearch(val) {
+    if (val.includes(',') || val.includes('，')) {
+        suggestionsBox.style.display = 'none';
+        return;
+    }
     if (val.length < 1) { suggestionsBox.style.display = 'none'; return; }
     const firstChar = val[0];
     let letter = /^[a-z]/.test(firstChar) ? firstChar : (/^[0-9]/.test(firstChar) ? 'num' : 'other');
@@ -251,7 +252,7 @@ async function performSearch(val) {
                     ignoreLocation: true
                 });
             }
-        } catch (e) { console.warn("词库未找到"); }
+        } catch (e) { console.warn("词库加载失败"); }
     }
     if (fuse) {
         visibleMatches = fuse.search(val).slice(0, 9).map(r => r.item);
@@ -261,21 +262,24 @@ async function performSearch(val) {
 
 function renderSuggestions() {
     if (visibleMatches.length > 0) {
-        suggestionsBox.innerHTML = visibleMatches.map((m, index) => `
-            <div class="suggestion-item" onclick="addTagToActive('${m.tag}')">
-                <span>
-                    <span class="key-hint" style="background:#eee;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:8px;">${index + 1}</span>
-                    <strong>${m.tag}</strong> 
-                    <small style="color:#94a3b8;margin-left:10px;">${m.aliases?m.aliases.split(',')[0]:''}</small>
-                </span>
-                <span style="color:#94a3b8;">${m.count?(m.count/1000).toFixed(1)+'k':''}</span>
-            </div>
-        `).join('');
+        suggestionsBox.innerHTML = visibleMatches.map((m, index) => {
+            const safeTagName = m.tag.replace(/'/g, "\\'");
+            return `
+                <div class="suggestion-item" onmousedown="event.preventDefault()" onclick="addTagToActive('${safeTagName}')">
+                    <span>
+                        <span style="background:#eee;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:8px;">${index + 1}</span>
+                        <strong>${m.tag}</strong> 
+                        <small style="color:#94a3b8;margin-left:10px;">${m.aliases?m.aliases.split(',')[0]:''}</small>
+                    </span>
+                    <span style="color:#94a3b8;">${m.count?(m.count/1000).toFixed(1)+'k':''}</span>
+                </div>
+            `;
+        }).join('');
         suggestionsBox.style.display = 'block';
     } else { suggestionsBox.style.display = 'none'; }
 }
 
-// 其余交互
+tagInput.addEventListener('input', (e) => performSearch(e.target.value.toLowerCase().trim()));
 tagInput.addEventListener('keydown', (e) => {
     if (suggestionsBox.style.display === 'block' && e.code.startsWith('Digit')) {
         const num = parseInt(e.key);
@@ -283,23 +287,55 @@ tagInput.addEventListener('keydown', (e) => {
             e.preventDefault(); addTagToActive(visibleMatches[num - 1].tag);
         }
     }
-    if (e.key === 'Enter' && tagInput.value.trim() !== '') { addTagToActive(tagInput.value.trim()); }
+    if (e.key === 'Enter' && tagInput.value.trim() !== '') {
+        const val = tagInput.value.trim();
+        if (val.includes(',') || val.includes('，')) processBatchTags(val);
+        else addTagToActive(val);
+    }
 });
+
+function processBatchTags(rawString) {
+    if (!activeRow) return;
+    rawString.split(/[,，]/).forEach(t => {
+        const clean = t.trim();
+        if (clean) createTagChip(clean, activeRow.querySelector('.tag-container'));
+    });
+    tagInput.value = ''; suggestionsBox.style.display = 'none'; updateMasterOutput();
+}
 
 function addTagToActive(tagName) {
     if (!activeRow) return;
     createTagChip(tagName, activeRow.querySelector('.tag-container'));
-    tagInput.value = ''; suggestionsBox.style.display = 'none';
-    updateMasterOutput();
+    tagInput.value = ''; suggestionsBox.style.display = 'none'; updateMasterOutput();
+    tagInput.focus();
 }
 
 function createTagChip(name, container) {
     const chip = document.createElement('div');
     chip.className = 'tag-chip';
-    chip.innerHTML = `<div class="icon-btn fav-btn">★</div><span class="tag-text">${name}</span><div class="icon-btn remove-btn">×</div>`;
-    chip.querySelector('.fav-btn').onclick = (e) => { e.stopPropagation(); addToSelectedFav(name); };
-    chip.querySelector('.remove-btn').onclick = (e) => { e.stopPropagation(); chip.remove(); updateMasterOutput(); };
-    chip.onclick = () => { if (chip.closest('#favCategories')) addTagToActive(name); };
+    // 结构：★ + 文字 + ×
+    chip.innerHTML = `
+        <div class="icon-btn fav-btn" title="收藏">★</div>
+        <span class="tag-text">${name}</span>
+        <div class="icon-btn remove-btn" title="删除">×</div>
+    `;
+    
+    chip.querySelector('.fav-btn').onclick = (e) => { 
+        e.stopPropagation(); 
+        addToSelectedFav(name); 
+    };
+    
+    chip.querySelector('.remove-btn').onclick = (e) => { 
+        e.stopPropagation(); 
+        chip.remove(); 
+        updateMasterOutput(); 
+    };
+    
+    // 如果是在收藏栏点击，则添加到当前激活的输出栏
+    chip.onclick = () => { 
+        if (chip.closest('#favCategories')) addTagToActive(name); 
+    };
+    
     container.appendChild(chip);
 }
 
@@ -334,7 +370,7 @@ function addNewRow() {
 }
 
 function clearRow(btn) { btn.closest('.panel').querySelector('.tag-container').innerHTML = ''; updateMasterOutput(); }
-function removeRow(btn) { const p = btn.closest('.panel'); p.remove(); updateMasterOutput(); }
+function removeRow(btn) { btn.closest('.panel').remove(); updateMasterOutput(); }
 
 function addFavCategory() {
     const div = document.createElement('div');
@@ -354,12 +390,8 @@ function addToSelectedFav(n) {
 
 function initTagSortable(el) { 
     new Sortable(el, { 
-        group: 'tags', 
-        animation: 200, 
-        ghostClass: 'sortable-ghost',
-        delay: 50, // 极短延迟，兼顾手机翻页
-        delayOnTouchOnly: true,
-        onEnd: updateMasterOutput 
+        group: 'tags', animation: 200, ghostClass: 'sortable-ghost',
+        delay: 50, delayOnTouchOnly: true, onEnd: updateMasterOutput 
     }); 
 }
 
