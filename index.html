@@ -2,8 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>AI Prompt Pro - 动态词库版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI Prompt Pro - 高级视觉增强版</title>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <style>
         :root {
             --primary: #6366f1;
@@ -22,12 +24,13 @@
             font-family: 'PingFang SC', system-ui, sans-serif; 
             background: #f0f4f8; padding: 20px; display: flex; 
             flex-direction: column; align-items: center; color: #333;
-            user-select: none; -webkit-user-select: none;
+            user-select: none; -webkit-user-select: none; margin: 0;
         }
 
-        input, textarea { user-select: text !important; -webkit-user-select: text !important; }
-        .container { width: 100%; max-width: 1000px; }
+        input, textarea { user-select: text !important; -webkit-user-select: text !important; font-size: 16px !important; }
+        .container { width: 100%; max-width: 1000px; box-sizing: border-box; }
 
+        /* 顶部预览区 - 保留高级感 */
         .master-output { 
             background: var(--master-bg); color: var(--master-text); 
             padding: 25px; border-radius: 24px; margin-bottom: 30px; 
@@ -35,102 +38,139 @@
         }
         .master-output h3 { margin-top: 0; color: #0284c7; font-size: 14px; font-weight: 800; letter-spacing: 1.5px; }
         #totalResult { 
-            background: rgba(255, 255, 255, 0.6); padding: 18px; border-radius: 12px; 
+            width: 100%; height: 120px; box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.8); padding: 18px; border-radius: 12px; 
             font-family: 'Cascadia Code', monospace; font-size: 16px; line-height: 1.6;
-            min-height: 60px; white-space: pre-wrap; word-break: break-all; margin-bottom: 15px; color: #075985;
+            color: #075985; border: 1px solid #bae6fd; resize: vertical; margin-bottom: 15px; outline: none;
         }
 
-        .controls-row { 
-            position: sticky; top: 10px; z-index: 1000; 
-            display: flex; gap: 15px; align-items: center; margin-bottom: 25px; 
-        }
-        
-        .search-container { flex: 1; position: relative; }
+        /* 控件区 */
+        .controls-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; width: 100%; }
+        .search-row { position: relative; width: 100%; }
         #tagInput { 
-            width: 100%; padding: 18px 25px; border: none; border-radius: 20px; font-size: 18px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.08); outline: none; border: 1px solid #fff;
+            width: 100%; box-sizing: border-box; padding: 18px 25px; border: none; border-radius: 20px; font-size: 18px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08); outline: none; border: 1px solid #fff; transition: 0.3s;
         }
+        #tagInput:focus { box-shadow: 0 10px 40px rgba(99, 102, 241, 0.15); }
 
+        /* 设置行 - 保持精致的同时适配手机 */
+        .settings-row { display: flex; justify-content: flex-end; align-items: center; gap: 12px; flex-wrap: wrap; }
         .size-slider-box { 
-            background: white; padding: 10px 20px; border-radius: 20px; 
-            display: flex; align-items: center; gap: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-            white-space: nowrap; font-weight: bold; color: var(--primary);
+            background: white; padding: 8px 18px; border-radius: 15px; 
+            display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            font-weight: bold; color: var(--primary); font-size: 13px;
         }
-        input[type=range] { cursor: pointer; accent-color: var(--primary); }
+        .size-slider-box input[type="range"] { cursor: pointer; height: 6px; border-radius: 5px; }
+        .size-slider-box input[type="number"] {
+            border: 1px solid #e2e8f0; border-radius: 8px; padding: 3px 6px; width: 45px; 
+            color: var(--primary); font-weight: bold; outline: none; text-align: center;
+        }
 
+        /* 面板设计 */
         .panel { 
             background: #fff; border: 3px solid transparent; border-radius: 20px; 
             padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .panel-handle { cursor: move; color: #cbd5e1; margin-right: 12px; font-size: 24px; }
-        .panel.active { border-color: var(--primary); background: #fdfdff; }
+        .panel.active { border-color: var(--primary); background: #fdfdff; transform: scale(1.01); }
         .panel.selected { border-color: var(--secondary); background: #fffafc; }
         
         .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .panel-title { font-weight: bold; border: none; font-size: 1.2em; width: 60%; background: transparent; padding: 5px; color: #1e293b; }
+        .panel-title-group { display: flex; align-items: center; flex: 1; }
+        .panel-title { font-weight: 800; border: none; font-size: 1.1em; width: 50%; background: transparent; color: #1e293b; outline: none; }
 
         .tag-container { 
-            display: flex; flex-wrap: wrap; align-content: flex-start; gap: 12px; 
-            min-height: 90px; padding: 15px; background: #f8fafc; border-radius: 15px; border: 2px dashed #e2e8f0;
+            display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px; 
+            min-height: 80px; padding: 15px; background: #f8fafc; border-radius: 15px; border: 2px dashed #e2e8f0;
         }
         
+        /* 标签设计 */
         .tag-chip { 
             background: var(--tag-bg); color: var(--tag-text); 
-            padding: 0.5em 1em; border-radius: 0.8em; 
-            display: flex; align-items: center; gap: 0.6em; 
+            padding: 0.5em 0.9em; border-radius: 1em; 
+            display: flex; align-items: center; gap: 0.7em; 
             font-size: var(--tag-font-size); 
-            font-weight: 500; cursor: grab; transition: transform 0.2s; 
+            font-weight: 600; cursor: grab; transition: 0.2s; 
             border: 1px solid rgba(99, 102, 241, 0.1);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         }
         .tag-chip:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(99, 102, 241, 0.2); }
+        .tag-chip:active { cursor: grabbing; }
         
-        .icon-btn { cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
+        .icon-btn { cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; opacity: 0.7; }
+        .icon-btn:hover { opacity: 1; transform: scale(1.2); }
         .fav-btn { color: #f59e0b; }
         .remove-btn { color: #f87171; font-weight: bold; }
 
-        .btn { padding: 12px 20px; border-radius: 12px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-add { background: var(--primary); color: white; width: 100%; margin-bottom: 40px; }
-        .btn-copy-master { background: var(--success); color: white; width: 100%; }
-        .btn-clear { background: #f1f5f9; color: #64748b; font-size: 12px; }
+        /* 按钮设计 */
+        .btn { padding: 12px 20px; border-radius: 14px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn:active { transform: scale(0.95); }
+        .btn-add { background: var(--primary); color: white; width: 100%; margin-bottom: 40px; font-size: 16px; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.2); }
+        .btn-copy-master { background: var(--success); color: white; width: 100%; height: 52px; font-size: 16px; box-shadow: 0 8px 15px rgba(16, 185, 129, 0.2); }
+        .btn-clear-row { background: #fee2e2; color: #ef4444; font-size: 12px; }
+        .btn-del-row { background: #f1f5f9; color: #64748b; font-size: 12px; }
 
+        /* 联想框 */
         .suggestions { 
-            position: absolute; width: 100%; background: white; border-radius: 15px; 
-            box-shadow: 0 10px 40px rgba(0,0,0,0.15); display: none; max-height: 350px; overflow-y: auto; margin-top: 10px; 
+            position: absolute; width: 100%; background: white; border-radius: 20px; z-index: 1001;
+            box-shadow: 0 15px 50px rgba(0,0,0,0.15); display: none; max-height: 380px; overflow-y: auto; margin-top: 10px; border: 1px solid #f0f0f0;
         }
-        .suggestion-item { padding: 12px 25px; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; }
-        .suggestion-item:hover { background: #f8faff; }
+        .suggestion-item { padding: 14px 25px; cursor: pointer; display: flex; justify-content: space-between; border-bottom: 1px solid #f8f8f8; transition: 0.2s; }
+        .suggestion-item:hover { background: #f5f7ff; padding-left: 30px; }
 
-        .sortable-ghost { opacity: 0.2; }
-        .panel-ghost { opacity: 0.4; border: 2px dashed var(--primary); }
+        /* 手机端无感适配 */
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .master-output { padding: 15px; border-radius: 20px; }
+            .settings-row { justify-content: center; }
+            .size-slider-box { flex: 1; min-width: 140px; }
+            .panel-title { width: 70%; }
+            .key-hint { display: none; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="master-output">
-        <h3>✨ 总结果实时预览</h3>
-        <div id="totalResult">等待输入标签...</div>
+        <h3>✨ 总结果实时预览 (可手动编辑)</h3>
+        <textarea id="totalResult" placeholder="等待输入标签..."></textarea>
         <button class="btn btn-copy-master" onclick="copyMasterResult()">复制完整 Prompt</button>
     </div>
 
-    <div class="controls-row">
-        <div class="search-container">
-            <input type="text" id="tagInput" placeholder="🔍 输入首字母自动加载词库 (如 'a', 'b')...">
+    <div class="controls-container">
+        <div class="search-row">
+            <input type="text" id="tagInput" placeholder="🔍 模糊搜索 (支持拼写错误)..." autocomplete="off">
             <div id="suggestions" class="suggestions"></div>
         </div>
         
-        <div class="size-slider-box">
-            <span>字号:</span>
-            <input type="range" id="sizeSlider" min="12" max="32" value="18">
-            <span id="sizeVal">18px</span>
+        <div class="settings-row">
+            <div class="size-slider-box" style="border-left: 4px solid var(--secondary);">
+                <span>搜索容错:</span>
+                <input type="range" id="thresholdSlider" min="0" max="1" step="0.05" value="0.4">
+                <input type="number" id="thresholdInput" min="0" max="1" step="0.1" value="0.4">
+            </div>
+
+            <div class="size-slider-box">
+                <span>标签字号:</span>
+                <input type="range" id="sizeSlider" min="12" max="32" value="18">
+                <span id="sizeVal" style="min-width: 40px;">18px</span>
+            </div>
         </div>
     </div>
 
     <div id="outputRows">
         <div class="panel active" onclick="setActiveRow(this)">
             <div class="panel-header">
-                <div><span class="panel-handle">⠿</span><input class="panel-title" value="角色主体"></div>
-                <button class="btn btn-clear" onclick="this.closest('.panel').remove(); updateMasterOutput();">删除</button>
+                <div class="panel-title-group">
+                    <span class="panel-handle">⠿</span>
+                    <input class="panel-title" value="角色主体">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-clear-row" onclick="clearRow(this)">清空</button>
+                    <button class="btn btn-del-row" onclick="removeRow(this)">删除</button>
+                </div>
             </div>
             <div class="tag-container"></div>
         </div>
@@ -140,13 +180,16 @@
 
     <div class="favorite-section" style="width:100%">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
-            <h2 style="margin:0; font-size: 1.5em; color: #64748b;">⭐ 我的收藏库</h2>
+            <h2 style="margin:0; font-size: 1.5em; color: #64748b; font-weight: 800;">⭐ 收藏库</h2>
             <button class="btn" style="background:var(--secondary); color:white; font-size:12px;" onclick="addFavCategory()">+ 新分类</button>
         </div>
         <div id="favCategories">
             <div class="panel selected" onclick="setSelectedFav(this)">
                 <div class="panel-header">
-                    <div><span class="panel-handle">⠿</span><input class="panel-title" value="默认收藏分类"></div>
+                    <div class="panel-title-group">
+                        <span class="panel-handle">⠿</span>
+                        <input class="panel-title" value="常用标签">
+                    </div>
                 </div>
                 <div class="tag-container"></div>
             </div>
@@ -155,70 +198,111 @@
 </div>
 
 <script>
-// --- 基础状态 ---
+// --- 核心逻辑 ---
 let activeRow = document.querySelector('#outputRows .panel');
 let selectedFav = document.querySelector('#favCategories .panel');
-let currentCache = []; // 当前字母的文件缓存
-let currentLetter = ''; // 当前加载的字母
+let currentCache = [];
+let currentLetter = '';
+let visibleMatches = []; 
+let fuse = null;
+let searchThreshold = 0.4;
 
-// --- 字号控制 ---
-const sizeSlider = document.getElementById('sizeSlider');
-const sizeValText = document.getElementById('sizeVal');
-sizeSlider.addEventListener('input', (e) => {
-    const val = e.target.value;
-    document.documentElement.style.setProperty('--tag-font-size', val + 'px');
-    sizeValText.innerText = val + 'px';
-});
-
-// --- 核心搜索与词库读取逻辑 ---
 const tagInput = document.getElementById('tagInput');
 const suggestionsBox = document.getElementById('suggestions');
+const thresholdSlider = document.getElementById('thresholdSlider');
+const thresholdInput = document.getElementById('thresholdInput');
 
-tagInput.addEventListener('input', async (e) => {
-    const val = e.target.value.toLowerCase().trim();
-    if (val.length < 1) {
-        suggestionsBox.style.display = 'none';
-        return;
+// 容错滑块同步
+function syncThreshold(val, source) {
+    searchThreshold = parseFloat(val);
+    if (source === 'slider') thresholdInput.value = val;
+    else thresholdSlider.value = val;
+    if (fuse) {
+        fuse.options.threshold = searchThreshold;
+        if (tagInput.value.trim()) performSearch(tagInput.value.trim());
     }
+}
+thresholdSlider.addEventListener('input', (e) => syncThreshold(e.target.value, 'slider'));
+thresholdInput.addEventListener('change', (e) => {
+    let val = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 1);
+    syncThreshold(val, 'input');
+});
 
-    // 确定首字母对应的文件名
+// 搜索功能
+tagInput.addEventListener('input', async (e) => {
+    performSearch(e.target.value.toLowerCase().trim());
+});
+
+async function performSearch(val) {
+    if (val.length < 1) { suggestionsBox.style.display = 'none'; return; }
     const firstChar = val[0];
-    let letter = /^[a-z]/.test(firstChar) ? firstChar : 
-                 (/^[0-9]/.test(firstChar) ? 'num' : 'other');
+    let letter = /^[a-z]/.test(firstChar) ? firstChar : (/^[0-9]/.test(firstChar) ? 'num' : 'other');
 
-    // 动态加载 JSON 文件 (基于 tags_data 文件夹)
     if (currentLetter !== letter) {
         try {
-            // 注意：这里路径要匹配你 split_csv.py 生成的文件夹
-            const response = await fetch(`tags_data/${letter}.json`);
-            if (!response.ok) throw new Error('文件未找到');
-            currentCache = await response.json();
-            currentLetter = letter;
-        } catch (err) {
-            console.error("词库加载失败，请确保 tags_data 文件夹与 HTML 在同一目录:", err);
-            return;
-        }
+            const resp = await fetch(`tags_data/${letter}.json`);
+            if (resp.ok) {
+                currentCache = await resp.json();
+                currentLetter = letter;
+                fuse = new Fuse(currentCache, {
+                    keys: [{ name: 'tag', weight: 0.7 }, { name: 'aliases', weight: 0.3 }],
+                    threshold: searchThreshold,
+                    distance: 100,
+                    ignoreLocation: true
+                });
+            }
+        } catch (e) { console.warn("词库未找到"); }
     }
+    if (fuse) {
+        visibleMatches = fuse.search(val).slice(0, 9).map(r => r.item);
+        renderSuggestions();
+    }
+}
 
-    // 在当前缓存中模糊匹配
-    const matches = currentCache
-        .filter(i => i.tag.includes(val) || i.aliases.includes(val))
-        .slice(0, 15); // 展示前15个结果
-
-    if (matches.length > 0) {
-        suggestionsBox.innerHTML = matches.map(m => `
+function renderSuggestions() {
+    if (visibleMatches.length > 0) {
+        suggestionsBox.innerHTML = visibleMatches.map((m, index) => `
             <div class="suggestion-item" onclick="addTagToActive('${m.tag}')">
-                <span><strong>${m.tag}</strong> <small style="color:#94a3b8; margin-left:10px;">${m.aliases.split(',')[0]}</small></span>
-                <span style="color:#94a3b8;">${(m.count/1000).toFixed(1)}k</span>
+                <span>
+                    <span class="key-hint" style="background:#eee;padding:2px 6px;border-radius:4px;font-size:10px;margin-right:8px;">${index + 1}</span>
+                    <strong>${m.tag}</strong> 
+                    <small style="color:#94a3b8;margin-left:10px;">${m.aliases?m.aliases.split(',')[0]:''}</small>
+                </span>
+                <span style="color:#94a3b8;">${m.count?(m.count/1000).toFixed(1)+'k':''}</span>
             </div>
         `).join('');
         suggestionsBox.style.display = 'block';
-    } else {
-        suggestionsBox.style.display = 'none';
+    } else { suggestionsBox.style.display = 'none'; }
+}
+
+// 其余交互
+tagInput.addEventListener('keydown', (e) => {
+    if (suggestionsBox.style.display === 'block' && e.code.startsWith('Digit')) {
+        const num = parseInt(e.key);
+        if (num >= 1 && num <= visibleMatches.length) {
+            e.preventDefault(); addTagToActive(visibleMatches[num - 1].tag);
+        }
     }
+    if (e.key === 'Enter' && tagInput.value.trim() !== '') { addTagToActive(tagInput.value.trim()); }
 });
 
-// --- 界面交互逻辑 ---
+function addTagToActive(tagName) {
+    if (!activeRow) return;
+    createTagChip(tagName, activeRow.querySelector('.tag-container'));
+    tagInput.value = ''; suggestionsBox.style.display = 'none';
+    updateMasterOutput();
+}
+
+function createTagChip(name, container) {
+    const chip = document.createElement('div');
+    chip.className = 'tag-chip';
+    chip.innerHTML = `<div class="icon-btn fav-btn">★</div><span class="tag-text">${name}</span><div class="icon-btn remove-btn">×</div>`;
+    chip.querySelector('.fav-btn').onclick = (e) => { e.stopPropagation(); addToSelectedFav(name); };
+    chip.querySelector('.remove-btn').onclick = (e) => { e.stopPropagation(); chip.remove(); updateMasterOutput(); };
+    chip.onclick = () => { if (chip.closest('#favCategories')) addTagToActive(name); };
+    container.appendChild(chip);
+}
+
 function setActiveRow(el) {
     document.querySelectorAll('#outputRows .panel').forEach(r => r.classList.remove('active'));
     el.classList.add('active'); activeRow = el;
@@ -231,104 +315,73 @@ function setSelectedFav(el) {
 
 function updateMasterOutput() {
     const rows = document.querySelectorAll('#outputRows .panel');
-    let finalString = "";
+    let final = "";
     rows.forEach(row => {
         const tags = Array.from(row.querySelectorAll('.tag-text')).map(t => t.innerText.trim());
-        if (tags.length > 0) finalString += tags.join(', ') + ",\n";
+        if (tags.length > 0) final += tags.join(', ') + ",\n";
     });
-    document.getElementById('totalResult').innerText = finalString.trim() || "等待输入标签...";
+    document.getElementById('totalResult').value = final.trim();
 }
-
-function addTagToActive(tagName) {
-    if (!activeRow) return;
-    createTagChip(tagName, activeRow.querySelector('.tag-container'));
-    tagInput.value = ''; suggestionsBox.style.display = 'none';
-    updateMasterOutput();
-}
-
-function createTagChip(name, container) {
-    const chip = document.createElement('div');
-    chip.className = 'tag-chip';
-    chip.innerHTML = `
-        <div class="icon-btn fav-btn" onclick="event.stopPropagation(); addToSelectedFav('${name}')">★</div>
-        <span class="tag-text">${name}</span>
-        <div class="icon-btn remove-btn" onclick="event.stopPropagation(); this.parentElement.remove(); updateMasterOutput();">×</div>
-    `;
-    chip.onclick = () => { if (chip.closest('#favCategories')) addTagToActive(name); };
-    container.appendChild(chip);
-}
-
-// --- 拖拽与增删逻辑 ---
-function initPanelSortable(id) {
-    new Sortable(document.getElementById(id), { handle: '.panel-handle', animation: 250, ghostClass: 'panel-ghost', onEnd: updateMasterOutput });
-}
-function initTagSortable(el) {
-    new Sortable(el, { group: 'tags', animation: 150, ghostClass: 'sortable-ghost', onEnd: updateMasterOutput });
-}
-
-initPanelSortable('outputRows');
-initPanelSortable('favCategories');
-document.querySelectorAll('.tag-container').forEach(initTagSortable);
 
 function addNewRow() {
     const div = document.createElement('div');
     div.className = 'panel';
     div.onclick = function() { setActiveRow(this); };
-    div.innerHTML = `
-        <div class="panel-header">
-            <div><span class="panel-handle">⠿</span><input class="panel-title" value="新输出栏"></div>
-            <button class="btn btn-clear" onclick="this.closest('.panel').remove(); updateMasterOutput();">删除</button>
-        </div>
-        <div class="tag-container"></div>
-    `;
+    div.innerHTML = `<div class="panel-header"><div class="panel-title-group"><span class="panel-handle">⠿</span><input class="panel-title" value="新输出栏"></div><div class="btn-group"><button class="btn btn-clear-row" onclick="clearRow(this)">清空</button><button class="btn btn-del-row" onclick="removeRow(this)">删除</button></div></div><div class="tag-container"></div>`;
     document.getElementById('outputRows').appendChild(div);
     initTagSortable(div.querySelector('.tag-container'));
-    setActiveRow(div); updateMasterOutput();
+    setActiveRow(div);
 }
 
-function addToSelectedFav(name) {
-    if (selectedFav) {
-        // 防止重复收藏
-        const existing = Array.from(selectedFav.querySelectorAll('.tag-text')).map(t => t.innerText);
-        if(!existing.includes(name)) createTagChip(name, selectedFav.querySelector('.tag-container'));
-    }
-}
+function clearRow(btn) { btn.closest('.panel').querySelector('.tag-container').innerHTML = ''; updateMasterOutput(); }
+function removeRow(btn) { const p = btn.closest('.panel'); p.remove(); updateMasterOutput(); }
 
 function addFavCategory() {
     const div = document.createElement('div');
     div.className = 'panel';
     div.onclick = function() { setSelectedFav(this); };
-    div.innerHTML = `
-        <div class="panel-header">
-            <div><span class="panel-handle">⠿</span><input class="panel-title" value="新收藏库"></div>
-            <button class="btn btn-clear" onclick="this.parentElement.parentElement.remove()">删除</button>
-        </div>
-        <div class="tag-container"></div>
-    `;
+    div.innerHTML = `<div class="panel-header"><div class="panel-title-group"><span class="panel-handle">⠿</span><input class="panel-title" value="新分类"></div><button class="btn btn-del-row" onclick="this.closest('.panel').remove()">删除</button></div><div class="tag-container"></div>`;
     document.getElementById('favCategories').appendChild(div);
     initTagSortable(div.querySelector('.tag-container'));
     setSelectedFav(div);
 }
 
+function addToSelectedFav(n) {
+    if (!selectedFav) return alert("请先选一个收藏分类");
+    const c = selectedFav.querySelector('.tag-container');
+    if (!Array.from(c.querySelectorAll('.tag-text')).some(t => t.innerText === n)) createTagChip(n, c);
+}
+
+function initTagSortable(el) { 
+    new Sortable(el, { 
+        group: 'tags', 
+        animation: 200, 
+        ghostClass: 'sortable-ghost',
+        delay: 50, // 极短延迟，兼顾手机翻页
+        delayOnTouchOnly: true,
+        onEnd: updateMasterOutput 
+    }); 
+}
+
+const sizeSlider = document.getElementById('sizeSlider');
+sizeSlider.addEventListener('input', (e) => {
+    document.documentElement.style.setProperty('--tag-font-size', e.target.value + 'px');
+    document.getElementById('sizeVal').innerText = e.target.value + 'px';
+});
+
 function copyMasterResult() {
-    const text = document.getElementById('totalResult').innerText;
-    if (text === "等待输入标签...") return;
-    navigator.clipboard.writeText(text).then(() => {
-        const btn = document.querySelector('.btn-copy-master');
-        btn.innerText = "✨ 复制成功！";
-        setTimeout(() => btn.innerText = "复制完整 Prompt", 1500);
+    const t = document.getElementById('totalResult').value;
+    navigator.clipboard.writeText(t).then(() => {
+        const b = document.querySelector('.btn-copy-master');
+        b.innerText = "✨ 复制成功！";
+        setTimeout(() => b.innerText = "复制完整 Prompt", 1500);
     });
 }
 
-// 隐藏建议框点击
+new Sortable(document.getElementById('outputRows'), { handle: '.panel-handle', animation: 250, onEnd: updateMasterOutput });
+new Sortable(document.getElementById('favCategories'), { handle: '.panel-handle', animation: 250 });
+document.querySelectorAll('.tag-container').forEach(initTagSortable);
 document.addEventListener('click', (e) => { if(!tagInput.contains(e.target)) suggestionsBox.style.display = 'none'; });
-
-// 回车直接添加
-tagInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && tagInput.value.trim() !== '') {
-        addTagToActive(tagInput.value.trim());
-    }
-});
 </script>
 </body>
 </html>
